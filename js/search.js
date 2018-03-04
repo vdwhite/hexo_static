@@ -1,1 +1,121 @@
-!function(){var e,t,n,i=document.getElementById("search-key"),s=(document.getElementById("search-local"),document.getElementById("search-form"),document.getElementById("result-mask")),o=document.getElementById("result-wrap"),r=document.getElementById("search-result"),c=document.getElementById("search-tpl").innerHTML;function a(e,t){return t.lastIndex=0,t.test(e)}function u(e){var t;t=e.length?e.map(function(e){return t=c,n={title:e.title,path:e.path,content:function(e){var t=i.value,n=e.indexOf(t),s=e.replace(t,"<b>"+t+"</b>");if(n>0)return s.substr(n-15,45)}(e.text)},t.replace(/\{\w+\}/g,function(e){var t=e.replace(/\{|\}/g,"");return n[t]||""});var t,n}).join(""):'<div class="tips"><p>没有找到相关结果!</p></div>',r.innerHTML=t}function d(e,t){return e.className.match(new RegExp("(\\s|^)"+t+"(\\s|$)"))}function l(e,t){d(e,t)||(e.className+=" "+t)}function h(e,t){if(d(e,t)){var n=new RegExp("(\\s|^)"+t+"(\\s|$)");e.className=e.className.replace(n," ")}}function f(e){var t=this.value.trim();if(t){var r=new RegExp(t.replace(/[ ]/g,"|"),"gmi");!function(e){if(n)e(n);else{var t=new XMLHttpRequest;t.open("GET","/content.json",!0),t.onload=function(){if(this.status>=200&&this.status<300){var t=JSON.parse(this.response||this.responseText);n=t instanceof Array?t:t.posts,e(n)}else console.error(this.statusText)},t.onerror=function(){console.error(this.statusText)},t.send()}}(function(e){u(e.filter(function(e){return n=r,a((t=e).title,n)||a(t.text,n);var t,n}))}),e.preventDefault(),h(o,"hide"),h(s,"hide"),i.onfocus=function(){h(o,"hide"),h(s,"hide")}}else u("")}window.innerWidth?e=parseInt(window.innerWidth):document.body&&document.body.clientWidth&&(e=parseInt(document.body.clientWidth)),window.innerHeight?t=parseInt(window.innerHeight):document.body&&document.body.clientHeight&&(t=parseInt(document.body.clientHeight)),s.style.width=e+"px",s.style.height=t+"px",i.onfocus=function(){i.addEventListener("input",f)},s.onclick=function(){l(o,"hide"),l(s,"hide")}}();
+(function() {
+    var searchWord = document.getElementById('search-key'),
+        searchLocal = document.getElementById('search-local'),
+        searchForm = document.getElementById('search-form'),
+        searchMask = document.getElementById('result-mask'),
+        searchWrap = document.getElementById('result-wrap'),
+        searchResult = document.getElementById('search-result'),
+        searchTpl = document.getElementById('search-tpl').innerHTML,
+        winWidth, winHeight, searchData;
+    if (window.innerWidth) {
+        winWidth = parseInt(window.innerWidth);
+    } else if ((document.body) && (document.body.clientWidth)) {
+        winWidth = parseInt(document.body.clientWidth);
+    }
+    if (window.innerHeight) {
+        winHeight = parseInt(window.innerHeight);
+    } else if ((document.body) && (document.body.clientHeight)) {
+        winHeight = parseInt(document.body.clientHeight);
+    }
+    searchMask.style.width = winWidth + 'px';
+    searchMask.style.height = winHeight + 'px';
+    function loadData(success) {
+        if (!searchData) {
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', '/content.json', true);
+            xhr.onload = function() {
+                if (this.status >= 200 && this.status < 300) {
+                    var res = JSON.parse(this.response||this.responseText);
+                    searchData = res instanceof Array ? res : res.posts;
+                    success(searchData);
+                } else {
+                    console.error(this.statusText);
+                }
+            };
+            xhr.onerror = function() {
+                console.error(this.statusText);
+            };
+            xhr.send();
+        } else {
+            success(searchData);
+        }
+    }
+    function matcher(post, regExp) {
+        return regtest(post.title, regExp) || regtest(post.text, regExp);
+    }
+    function regtest(raw, regExp) {
+        regExp.lastIndex = 0;
+        return regExp.test(raw);
+    }
+    function render(data) {
+        var html = '';
+        if (data.length) {
+            html = data.map(function(post) {
+                return tpl(searchTpl, {
+                    title: post.title,
+                    path: post.path,
+                    content: content(post.text)
+                });
+            }).join('');
+        } else {
+            html = '<div class="tips"><p>没有找到相关结果!</p></div>';
+        }
+        searchResult.innerHTML = html;
+    }
+    function content(art){
+    	var keyword = searchWord.value;
+    	var index = art.indexOf(keyword);	
+    	var artRe = art.replace(keyword, '<b>' + keyword + '</b>');
+    	if (index > 0){
+            return artRe.substr(index-15, 45);
+    	}
+    }
+    function tpl(html, data) {
+        return html.replace(/\{\w+\}/g, function(str) {
+            var prop = str.replace(/\{|\}/g, '');
+            return data[prop] || '';
+        });
+    }
+    function hasClass(obj, cls) {
+        return obj.className.match(new RegExp('(\\s|^)' + cls + '(\\s|$)'));
+    }
+    function addClass(obj, cls) {
+        if (!hasClass(obj, cls)) obj.className += " " + cls;
+    }
+    function removeClass(obj, cls) {
+        if (hasClass(obj, cls)) {
+            var reg = new RegExp('(\\s|^)' + cls + '(\\s|$)');
+            obj.className = obj.className.replace(reg, ' ');
+        }
+    }
+    function search(e) {
+        var key = this.value.trim();
+        if (!key) {
+        	render('');
+            return;
+        }
+        var regExp = new RegExp(key.replace(/[ ]/g, '|'), 'gmi');
+        loadData(function(data) {
+            var result = data.filter(function(post) {
+                return matcher(post, regExp);
+            });
+            render(result);
+        });
+        e.preventDefault();
+        removeClass(searchWrap, 'hide');
+        removeClass(searchMask, 'hide');
+        searchWord.onfocus=function() {
+            removeClass(searchWrap, 'hide');
+            removeClass(searchMask, 'hide');
+        };
+    }
+    searchWord.onfocus=function(){
+        searchWord.addEventListener('input', search);
+    };
+    searchMask.onclick=function(){
+        addClass(searchWrap, 'hide');
+        addClass(searchMask, 'hide');
+    };
+
+
+})();
